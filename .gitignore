@@ -1,0 +1,68 @@
+# ─── Python ───────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+*.spec
+
+# ─── Virtual environments ──────────────────────────────────────
+aml_env/
+.env
+.venv
+env/
+venv/
+
+# ─── Datasets (large CSV/TXT data files) ──────────────────────
+*.csv
+*.tsv
+*.parquet
+*.feather
+HI-Small_Trans.csv
+HI-Small_accounts.csv
+HI-Small_Patterns.txt
+data/
+
+# ─── Trained model artifacts ──────────────────────────────────
+models/*.pkl
+models/*.pt
+models/*.bin
+models/*.joblib
+
+# ─── Databases ────────────────────────────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+
+# ─── IDE & OS ─────────────────────────────────────────────────
+.vscode/
+.idea/
+*.DS_Store
+Thumbs.db
+desktop.ini
+
+# ─── Logs & temp ──────────────────────────────────────────────
+*.log
+*.tmp
+*.bak
+logs/
+scratch/
+
+# ─── Node / dashboard dependencies ───────────────────────────
+dashboard/node_modules/
+dashboard/dist/
+dashboard/.vite/
+
+# ─── Jupyter ─────────────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ─── Coverage / test artifacts ───────────────────────────────
+.coverage
+htmlcov/
+.pytest_cache/

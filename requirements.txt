@@ -1,0 +1,35 @@
+# Core data
+pandas==2.2.2
+numpy==1.26.4
+scipy==1.13.1
+
+# ML
+scikit-learn==1.5.1
+xgboost==2.1.1
+imbalanced-learn==0.12.3
+shap==0.45.1
+
+# Graph
+networkx==3.3
+torch==2.3.1
+torch-geometric==2.5.3
+torch-scatter==2.1.2
+torch-sparse==0.6.18
+
+# API
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+pydantic==2.7.4
+websockets==12.0
+
+# Database (for whitelist + alerts persistence)
+sqlalchemy==2.0.31
+aiosqlite==0.20.0
+
+# Utilities
+python-dateutil==2.9.0
+tqdm==4.66.4
+loguru==0.7.2
+joblib==1.4.2
+python-multipart==0.0.9
+httpx==0.27.0
