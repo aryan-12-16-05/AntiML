@@ -31,21 +31,21 @@ class XGBoostAMLModel:
     def build_model(self, scale_pos_weight: float = 50.0) -> xgb.XGBClassifier:
         """Construct XGBoost model with CUDA acceleration and imbalance handling."""
         self.model = xgb.XGBClassifier(
-            n_estimators=500,
-            max_depth=7,
-            learning_rate=0.05,
-            subsample=0.8,
-            colsample_bytree=0.8,
-            min_child_weight=5,
-            gamma=1,
-            reg_alpha=0.1,
-            reg_lambda=1.0,
-            scale_pos_weight=scale_pos_weight,  # handles class imbalance
+            n_estimators=1200,
+            max_depth=4,
+            learning_rate=0.03,
+            subsample=0.9,
+            colsample_bytree=0.9,
+            min_child_weight=12,
+            gamma=3,
+            reg_alpha=0.5,
+            reg_lambda=2.0,
+            scale_pos_weight=scale_pos_weight,
             eval_metric=["auc", "aucpr"],
-            early_stopping_rounds=30,
+            early_stopping_rounds=50,
             random_state=42,
             n_jobs=-1,
-            tree_method="hist",         # fast histogram-based (works on CPU + GPU)
+            tree_method="hist",
             device="cuda" if self._cuda_available() else "cpu",
         )
         return self.model
@@ -79,24 +79,34 @@ class XGBoostAMLModel:
         self.explainer = shap.TreeExplainer(self.model)
 
     def tune_threshold(self, X_val: np.ndarray, y_val: np.ndarray,
-                       min_recall: float = 0.75) -> float:
+                       min_recall: float = 0.65,
+                       min_precision: float = 0.08) -> float:
         """
-        Tune decision threshold to maximize F1 at minimum recall >= min_recall.
+        Tune threshold for the best F1 while protecting precision and recall.
         """
         probs = self.predict_proba(X_val)
         precision, recall, thresholds = precision_recall_curve(y_val, probs)
 
         best_f1, best_thresh = 0.0, 0.5
         for p, r, t in zip(precision, recall, thresholds):
-            if r < min_recall:
+            if r < min_recall or p < min_precision:
                 continue
             f1 = 2 * p * r / (p + r + 1e-9)
             if f1 > best_f1:
                 best_f1 = f1
                 best_thresh = t
 
+        if best_f1 == 0.0:
+            for p, r, t in zip(precision, recall, thresholds):
+                f1 = 2 * p * r / (p + r + 1e-9)
+                if f1 > best_f1:
+                    best_f1, best_thresh = f1, t
+
         self.threshold = float(best_thresh)
-        logger.info(f"Optimal threshold: {self.threshold:.4f} (F1={best_f1:.4f} @ recall≥{min_recall})")
+        logger.info(
+            f"Optimal threshold: {self.threshold:.4f} "
+            f"(F1={best_f1:.4f}, precision≥{min_precision}, recall≥{min_recall})"
+        )
         return self.threshold
 
     def predict_proba(self, X: np.ndarray) -> np.ndarray:

@@ -14,6 +14,7 @@ from pathlib import Path
 from loguru import logger
 from typing import Optional, Tuple, List
 import joblib
+from sklearn.metrics import precision_recall_curve
 
 try:
     from torch_geometric.data import Data, DataLoader, HeteroData
@@ -25,7 +26,6 @@ try:
 except ImportError:
     HAS_PYG = False
     logger.warning("PyTorch Geometric not installed. GNN model will be disabled.")
-
 
 # ------------------------------------------------------------------ #
 #  Focal Loss — better than BCE for extreme imbalance                 #
@@ -277,7 +277,7 @@ class GNNAMLModel:
 
         optimizer = torch.optim.AdamW(self.model.parameters(), lr=lr, weight_decay=1e-4)
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
-        criterion = FocalLoss(alpha=0.9, gamma=2.0)
+        criterion = FocalLoss(alpha=0.99, gamma=2.0)
 
         best_val_loss = float("inf")
         patience = 7
@@ -299,9 +299,21 @@ class GNNAMLModel:
                 with torch.no_grad():
                     val_logits = self.model(train_data)  # use train graph for now
                     val_loss = criterion(val_logits, train_data.y).item()
-                    preds = (torch.sigmoid(val_logits) >= 0.5).float()
-                    acc = (preds == train_data.y).float().mean().item()
-                logger.info(f"Epoch {epoch:3d} | Loss: {loss.item():.4f} | Val Loss: {val_loss:.4f} | Acc: {acc:.4f}")
+                    val_probs = torch.sigmoid(val_logits).cpu().numpy()
+                    val_targets = train_data.y.cpu().numpy()
+                    precision, recall, thresholds = precision_recall_curve(
+                        val_targets, val_probs
+                    )
+                    f1_scores = 2 * precision * recall / (precision + recall + 1e-9)
+                    best_idx = int(np.argmax(f1_scores[:-1])) if len(thresholds) else 0
+                    self.threshold = float(thresholds[best_idx]) if len(thresholds) else 0.5
+                    preds = (val_probs >= self.threshold).astype(np.float32)
+                    acc = float(np.mean(preds == val_targets))
+                logger.info(
+                    f"Epoch {epoch:3d} | Loss: {loss.item():.4f} | "
+                    f"Val Loss: {val_loss:.4f} | Acc: {acc:.4f} | "
+                    f"Threshold: {self.threshold:.4f}"
+                )
 
                 if val_loss < best_val_loss:
                     best_val_loss = val_loss
